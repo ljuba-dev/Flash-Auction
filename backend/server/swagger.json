@@ -1,0 +1,372 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Flash Action",
+    "description": "Build a real-time bidding platform where high-value items go live for 60 seconds. The system must handle 10,000+ concurrent users slamming the \"Bid\" button without crashing, double-charging, or losing a single bid.",
+    "version": "1.0"
+  },
+  "produces": ["application/json"],
+  "host": "localhost:3000",
+  "basePath": "/api/v1/",
+  "paths": {
+    "/user/all": {
+      "get": {
+        "summary": "Get all users",
+        "tags": ["User"],
+        "description": "Get all users",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/user/{id}": {
+      "get": {
+        "summary": "Get user",
+        "tags": ["User"],
+        "description": "Get user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of user",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user",
+        "tags": ["User"],
+        "description": "Update user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of user",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 1
+            }
+          },
+          {
+            "in": "body",
+            "name": "user",
+            "description": "User object to update",
+            "schema": {
+              "example": {
+                "username": "John Doe 1",
+                "password": "password 1"
+              },
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "description": "Username",
+                  "example": "John Doe 1"
+                },
+                "password": {
+                  "type": "string",
+                  "description": "Password",
+                  "example": "password 1"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete user",
+        "tags": ["User"],
+        "description": "Delete user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of user",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/user": {
+      "post": {
+        "summary": "Create user",
+        "tags": ["User"],
+        "description": "Create user",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "user",
+            "description": "User object to update",
+            "schema": {
+              "example": {
+                "username": "John Doe",
+                "email": "john.doe@example.com",
+                "password": "password"
+              },
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "description": "Username",
+                  "example": "John Doe"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email",
+                  "example": "john.doe@example.com"
+                },
+                "password": {
+                  "type": "string",
+                  "description": "Password",
+                  "example": "password"
+                }
+              },
+              "required": ["username", "email", "password"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+
+    "/item/all": {
+      "get": {
+        "summary": "Get all items",
+        "tags": ["Item"],
+        "description": "Get all items",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/item/{id}": {
+      "get": {
+        "summary": "Get item",
+        "tags": ["Item"],
+        "description": "Get item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of item",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update item",
+        "tags": ["Item"],
+        "description": "Update item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of item",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 1
+            }
+          },
+          {
+            "in": "body",
+            "name": "item",
+            "description": "Item object to update",
+            "schema": {
+              "example": {
+                "description": "Description of item 1",
+                "end_time": "2027-12-31T00:00:00.000Z"
+              },
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "description": "Description of item",
+                  "example": "Description of item 1"
+                },
+                "end_time": {
+                  "type": "string",
+                  "description": "End time",
+                  "example": "2027-01-01T00:00:00.000Z"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete item",
+        "tags": ["Item"],
+        "description": "Delete item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of item",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/item": {
+      "post": {
+        "summary": "Create item",
+        "tags": ["Item"],
+        "description": "Create item",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "item",
+            "description": "Item object to create",
+            "schema": {
+              "example": {
+                "name": "Item 1",
+                "description": "Description of item 1",
+                "starting_bid": 10.0,
+                "current_bid": 10.0,
+                "end_time": "2026-12-31T00:00:00.000Z"
+              },
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of item",
+                  "example": "Item 1"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of item",
+                  "example": "Description of item 1"
+                },
+                "starting_bid": {
+                  "type": "number",
+                  "description": "Starting bid",
+                  "example": 10.0
+                },
+                "current_bid": {
+                  "type": "number",
+                  "description": "Current bid",
+                  "example": 10.0
+                },
+                "end_time": {
+                  "type": "string",
+                  "description": "End time",
+                  "example": "2022-01-01T00:00:00.000Z"
+                }
+              },
+              "required": [
+                "name",
+                "description",
+                "starting_bid",
+                "current_bid",
+                "end_time"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/bid": {
+      "post": {
+        "summary": "Create bid",
+        "tags": ["Bid"],
+        "description": "Create bid",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "bid",
+            "description": "Bid object to create",
+            "schema": {
+              "example": {
+                "user_id": 1,
+                "item_id": 1,
+                "bid_amount": 15.0
+              },
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "integer",
+                  "description": "User id"
+                },
+                "item_id": {
+                  "type": "integer",
+                  "description": "Item id"
+                },
+                "bid_amount": {
+                  "type": "number",
+                  "description": "Bid amount"
+                }
+              },
+              "required": ["user_id", "item_id", "bid_amount"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}
