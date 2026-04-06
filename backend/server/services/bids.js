@@ -1,4 +1,5 @@
-import getConnection from "./db.js";
+import getConnection from './db.js';
+import { setKey, luaScriptCheckBids } from './redis.js';
 
 /**
  * Check if item exists
@@ -7,13 +8,11 @@ import getConnection from "./db.js";
  * */
 async function _checkItem(id) {
   const db = await getConnection();
-  const getItem = await db.query(
-    `SELECT * FROM auction.items WHERE id = '${id}';`,
-  );
+  const getItem = await db.query(`SELECT * FROM auction.items WHERE id = '${id}';`);
   if (getItem.rows.length === 0) {
     return {
       error: true,
-      message: "Item not found",
+      message: 'Item not found',
       statusCode: 404,
     };
   }
@@ -46,27 +45,37 @@ async function bid(user_id, item_id, bid_amount) {
     }
     // Check if user is allowed to bid on the item
     if (!_checkIfAllowToBid(item)) {
-      throw new Error("Item bidding is not active");
+      throw new Error('Item bidding is not active');
     }
     const db = await getConnection();
     // Update item current bid
-    const updateItem = await db.query(
-      `UPDATE auction.items SET current_bid = '${bid_amount}' WHERE id = '${item_id}';`,
-    );
-
-    if (updateItem.rowCount === 0) {
-      throw new Error("Item not updated");
-    }
+    // const updateItem = await db.query(
+    //   `UPDATE auction.items SET current_bid = '${bid_amount}' WHERE id = '${item_id}';`,
+    // );
+    //
+    // if (updateItem.rowCount === 0) {
+    //   throw new Error('Item not updated');
+    // }
     // Create bid
-    const bidCreate = await db.query(
-      `INSERT INTO auction.bids (user_id, item_id, bid_amount) VALUES ('${user_id}', '${item_id}', '${bid_amount}') RETURNING id;`,
-    );
-    if (bidCreate.rowCount === 0) {
-      throw new Error("Bid not created");
+
+    const key = `current_high_bid_${item_id}`;
+    // await setKey(key, bid_amount);
+    // Check if the bid amount is higher than the current high bid
+    const bid = await luaScriptCheckBids(key, bid_amount, item);
+    if (bid === 1) {
+      const bidCreate = await db.query(
+        `INSERT INTO auction.bids (user_id, item_id, bid_amount) VALUES ('${user_id}', '${item_id}', '${bid_amount}') RETURNING id;`,
+      );
+      if (bidCreate.rowCount === 0) {
+        throw new Error('Bid not created');
+      }
+      // Set current high bid to redis
+      return bidCreate.rows[0].id;
+    } else {
+      throw new Error('Bid amount is lower than current high bid');
     }
-    return bidCreate.rows[0].id;
   } catch (e) {
-    console.log("\x1b[31m" + e.message + "\x1b[0m");
+    console.log('\x1b[31m' + e.message + '\x1b[0m');
     return {
       error: true,
       message: e.message,
