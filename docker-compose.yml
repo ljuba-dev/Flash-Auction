@@ -1,0 +1,73 @@
+name: Flash-Auction-V1
+services:
+  backend:
+    container_name: Backend-Server
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: docker
+      PG_HOST: db
+      REDIS_URL: redis://redisuser:redissecretpassword@host.docker.internal
+      DATABASE_URL: postgres://mypostgresuser:mysecretpassword@db:5433/auction
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+
+  db:
+    container_name: Postgres-Server
+    image: postgres:18.3-alpine3.23
+    expose:
+      - "5433"
+    ports:
+      - "5433:5433"
+    environment:
+      POSTGRES_USER: mypostgresuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: auction
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    command: -p 5433
+    networks:
+      - app-network
+
+  redis:
+    container_name: Redis-Server
+    image: redis:latest
+    expose:
+      - "6379"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./backend/redis-user.acl:/etc/redis/users.acl
+    command: ["redis-server", "--aclfile", "/etc/redis/users.acl"]
+    restart: always
+
+  frontend:
+    container_name: Frontend-Server
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4200:8080"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis_data:
+
+
