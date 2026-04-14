@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {AuthService} from '../../services/auth/auth.service';
 import {Router} from '@angular/router';
+import {WsHandlers} from '../../services/ws/ws.handlers';
 
 @Component({
   selector: 'app-login',
@@ -16,6 +17,7 @@ export class LoginComponent {
 
   constructor(private fb:FormBuilder,
               private authService: AuthService,
+              private wsHandlerService: WsHandlers,
               private router: Router) {
 
     this.form = this.fb.group({
@@ -26,15 +28,19 @@ export class LoginComponent {
 
   login() {
     const val = this.form.value;
-
     if (val.email && val.password) {
       this.authService.login(val.email, val.password)
         .subscribe(
-          () => {
-            // TODO Continue login flow from here
-            // We must also connect to WS and to other stuff, save token to localstorage, list items on items page.. and bids etc...
+          (response) => {
+            if(response.token)
+            {
 
-            this.router.navigateByUrl('/items');
+              localStorage.setItem('token', response.token);
+              this.router.navigateByUrl('/items');
+              setTimeout( () => {
+                this.wsHandlerService.startHandling();
+              }, 200);
+            }
           }
         );
     }

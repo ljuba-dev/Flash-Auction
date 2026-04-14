@@ -1,50 +1,46 @@
-import getConnection from '../server/services/db.js';
+import { DB as db } from '../server/services/db.js';
 import bcrypt from 'bcrypt';
-const db = await getConnection();
+import { userData, itemsData } from './seed_data.js';
+
 /**
- * Seed user table with one user
- * 1. username: ljuba
- * 2. email: ljuba@ljuba.com
- * 3. password: ljuba */
+ * Seed user table
+ * */
 async function seedUsersTable() {
-  const pwd = bcrypt.hashSync('ljuba', 10);
-  const checkIfUserExists = await db.query(`SELECT 1 FROM auction.users WHERE email = 'ljuba@ljuba.com'`);
-  if (checkIfUserExists.length > 0) {
-    return {
-      error: true,
-      message: 'User already exists',
-    };
-  } else {
-    await db.query(`INSERT INTO auction.users (username, email, password) VALUES ('ljuba','ljuba@ljuba.com','${pwd}')`);
-    return {
-      error: false,
-      message: 'User created successfully',
-    };
+  let counter = 0;
+  let counterExits = 0;
+  for (const user of userData) {
+    const pwd = bcrypt.hashSync(user.password, 10);
+    const checkIfUserExists = await db.query(`SELECT 1 FROM auction.users WHERE email = '${user.email}'`);
+    if (checkIfUserExists.rows.length > 0) {
+      counterExits++;
+    } else {
+      await db.query(
+        `INSERT INTO auction.users (username, email, password) VALUES ('${user.username}','${user.email}','${pwd}')`,
+      );
+      counter++;
+    }
   }
+  return {
+    error: false,
+    continue: true,
+    message: 'User created successfully',
+  };
 }
 /**
- * Seed items table with one item
- * 1. name: Laptop
- * 2. description: A powerful laptop
- * 3. starting_bid: 10
- * 4. current_bid: 10
- * 5. end_time: 2027-01-01 00:00:00
+ * Seed items table
  */
 async function seedItemsTable() {
-  const checkIfItemExists = await db.query(`SELECT 1 FROM auction.items WHERE name = 'Laptop'`);
-  if (checkIfItemExists.length > 0) {
-    return {
-      error: true,
-      message: 'Item already exists',
-    };
-  } else {
+  let counter = 0;
+  for (const item of itemsData) {
     await db.query(
-      `INSERT INTO auction.items (name, description, starting_bid, current_bid, end_time) VALUES ('Laptop', 'A powerful laptop', 10, 10, '2027-01-01 00:00:00')`,
+      `INSERT INTO auction.items (name, description, starting_bid, current_bid, end_time) VALUES ('${item.name}', '${item.description}', ${item.starting_bid}, ${item.current_bid}, '${new Date(item.end_time).toISOString()}')`,
     );
-    return {
-      error: false,
-      message: 'Item created successfully',
-    };
+    counter++;
   }
+  return {
+    error: false,
+    continue: true,
+    message: 'Item created successfully',
+  };
 }
 export { seedUsersTable, seedItemsTable };

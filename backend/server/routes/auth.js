@@ -13,7 +13,9 @@ router.post('/', async (req, res) => {
 
     res.status(response.statusCode).json(response);
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     res.status(400).json({ error: true, message: e.message, statusCode: 400 });
   }
 });

@@ -1,0 +1,67 @@
+config:
+# use 127.0.0.1 for local testing
+#  target: "http://127.0.0.1:3000/api/v1"
+  target: "http://backend:3000/api/v1"
+  http:
+    pool: 50
+  payload:
+    - path: "./amount.csv"
+      fields:
+        - "amount"
+      order: sequence
+      skipHeader: true
+    - path: "./users.csv"
+      fields:
+        - "email"
+        - "username"
+        - "password"
+        - "id"
+      order: sequence
+      skipHeader: true
+    - path: "./items.csv"
+      fields:
+        - "name"
+        - "description"
+        - "starting_bid"
+        - "current_bid"
+        - "end_time"
+        - "item_id"
+      order: sequence
+      skipHeader: true
+  phases:
+    - duration: 30
+      arrivalRate: 50
+      rampTo: 500
+      name: Warm up phase
+    - duration: 30
+      arrivalRate: 100
+      rampTo: 1000
+      name: Ramp up load
+    - duration: 30
+      arrivalRate: 1000
+      rampTo: 3000
+      name: Spike phase
+  plugins:
+    ensure:
+      thresholds:
+        - http.response_time.p99: 100
+        - http.response_time.p95: 75
+    apdex:
+      threshold: 100
+    metrics-by-endpoint: {}
+scenarios:
+  - name: "Bid on an item"
+    flow:
+      - post:
+          url: "/bid"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Auth:
+              '{"id": {{ id }},
+              "sub": {{ id }},
+              "email": "{{ email }}",
+              "username": "{{ username }}"}'
+          json:
+            user_id: "{{ id }}"
+            item_id: "{{ item_id }}"
+            bid_amount: "{{ amount }}"

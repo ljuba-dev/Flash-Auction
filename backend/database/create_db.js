@@ -1,5 +1,8 @@
 import { Pool } from 'pg';
 
+/**
+ * Create a database
+ * */
 async function createDb() {
   const adminConfig = process.env.DATABASE_URL
     ? { connectionString: process.env.DATABASE_URL }
@@ -16,18 +19,27 @@ async function createDb() {
     const checkIfDbExists = await client.query(`SELECT 1 FROM pg_database WHERE datname = '${process.env.PG_DB}'`);
     if (checkIfDbExists.rows.length === 0) {
       await client.query(`CREATE DATABASE ${process.env.PG_DB}`);
-      console.log(`\x1b[32m\t-Database ${process.env.PG_DB} created.\x1b[0m`);
+      if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+        console.log(`\x1b[32m\t-  Database ${process.env.PG_DB} created.\x1b[0m`);
+      }
       return 1;
     } else {
-      console.log(`\x1b[33m\t-Database ${process.env.PG_DB} already exists.\x1b[0m`);
+      if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+        console.log(`\x1b[33m\t-  Database ${process.env.PG_DB} already exists.\x1b[0m`);
+      }
       return 0;
     }
   } catch (error) {
-    console.log('\x1b[31m\tError creating database:', error.toString() + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m\tError creating database:', error.toString() + '\x1b[0m');
+    }
   } finally {
     await client.end();
   }
 }
+/**
+ * Create a schema
+ **/
 async function createSchema() {
   const adminConfig = process.env.DATABASE_URL
     ? { connectionString: process.env.DATABASE_URL }
@@ -42,19 +54,29 @@ async function createSchema() {
   try {
     const checkIfSchemaExists = await client.query(`SELECT 1 FROM pg_namespace WHERE nspname = 'auction';`);
     if (checkIfSchemaExists.rows.length > 0) {
-      console.log('\x1b[33m\t-Schema auction already exists.\x1b[0m');
+      if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+        console.log('\x1b[33m\t-  Schema auction already exists.\x1b[0m');
+      }
       return 1;
     } else {
       await client.query(`CREATE SCHEMA IF NOT EXISTS auction`);
-      console.log('\x1b[32m\t-Schema auction created.\x1b[0m');
+      if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+        console.log('\x1b[32m\t-  Schema auction created.\x1b[0m');
+      }
       return 0;
     }
   } catch (error) {
-    console.log('\x1b[31m\tError creating schema:', error.toString() + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m\tError creating schema:', error.toString() + '\x1b[0m');
+    }
   } finally {
     await client.end();
   }
 }
+
+/**
+ * Create database and schema
+ * */
 async function createDatabaseAndSchema() {
   return {
     db: await createDb(),

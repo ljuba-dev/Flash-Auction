@@ -5,9 +5,9 @@ LABEL authors="ljubomirvasic"
 WORKDIR /app
 
 # 3. Copy package files first to leverage Docker layer caching
-COPY package*.json ./
+COPY package.json ./
 
-RUN npm ci
+RUN npm install
 
 
 COPY .env ./.env

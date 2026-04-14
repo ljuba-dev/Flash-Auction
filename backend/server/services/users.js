@@ -1,6 +1,5 @@
-import getConnection from './db.js';
+import { DB as db } from './db.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { generateToken } from './jwt.js';
 /**
  * Get all users
@@ -8,11 +7,12 @@ import { generateToken } from './jwt.js';
  * */
 async function getUsers() {
   try {
-    const db = await getConnection();
     const users = await db.query(`select * from auction.users`);
     return users.rows;
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return {
       error: true,
       message: 'No users found',
@@ -27,14 +27,15 @@ async function getUsers() {
  * */
 async function getUserById(id) {
   try {
-    const db = await getConnection();
     const user = await db.query(`select * from auction.users where id = ${id}`);
     if (user.rows.length === 0) {
       throw new Error('User not found');
     }
     return user.rows[0];
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return {
       error: true,
       message: e.message,
@@ -50,7 +51,6 @@ async function getUserById(id) {
  * */
 async function insertUser(user) {
   try {
-    const db = await getConnection();
     const checkIfUserExists = await db.query(`select * from auction.users where email = '${user.email.trim()}'`);
     if (checkIfUserExists.rows.length > 0) {
       throw new Error('User already exists');
@@ -62,7 +62,9 @@ async function insertUser(user) {
       return userCreate.rows[0].id;
     }
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return {
       error: true,
       message: e.message,
@@ -77,7 +79,6 @@ async function insertUser(user) {
  * */
 async function updateUser(id, user) {
   try {
-    const db = await getConnection();
     const checkIfUserExists = await db.query(`select id from auction.users where id = ${id}`);
     if (checkIfUserExists.rows.length === 0) {
       throw new Error('User not found');
@@ -92,7 +93,9 @@ async function updateUser(id, user) {
     query += ` where id = ${id}`;
     return await db.query(query);
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return {
       error: true,
       message: e.message,
@@ -109,11 +112,12 @@ async function deleteUser(id) {
   try {
     if (!id) throw new Error('User id is required');
     if (typeof id !== 'number') throw new Error('User id must be a number');
-    const db = await getConnection();
     const deleteUser = await db.query(`delete from auction.users where id = ${id}`);
     return !!deleteUser;
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return {
       error: true,
       message: e.message,
@@ -130,7 +134,6 @@ async function deleteUser(id) {
  * */
 async function loginUser(email, password) {
   try {
-    const db = await getConnection();
     const user = await db.query(`select * from auction.users where email = '${email}'`);
     if (user.rows.length === 0) {
       throw new Error('User not found');
@@ -138,7 +141,7 @@ async function loginUser(email, password) {
 
     const checkuserCredentials = await bcrypt.compare(password, user.rows[0].password);
     if (checkuserCredentials) {
-      const token = await generateToken({
+      const token = generateToken({
         id: user.rows[0].id,
         username: user.rows[0].username,
         email: user.rows[0].email,
@@ -149,13 +152,15 @@ async function loginUser(email, password) {
         statusCode: 200,
         email: user.rows[0].email,
         username: user.rows[0].username,
-        token,
+        token: token,
       };
     } else {
       throw new Error('Invalid credentials');
     }
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return {
       error: true,
       message: e.message,

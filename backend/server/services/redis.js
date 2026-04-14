@@ -1,71 +1,127 @@
-import { createClient } from 'redis';
+import { getRedisClient } from './redis.connect.js';
 
-async function getRedisClient() {
-  try {
-    return await createClient({
-      url: process.env.REDIS_URL,
-    })
-      .on('error', (err) => {
-        if (err.code === 'ECONNREFUSED') {
-          throw err.code;
-        } else {
-          throw err.message;
-        }
-      })
-      .connect();
-  } catch (e) {
-    return e;
-  }
-}
+/**
+ * Close the Redis client
+ * @param {object} client
+ * */
 async function closeRedisClient(client) {
   await client.destroy();
 }
+/**
+ * Set a key in Redis
+ * @param {string} key
+ * @param {string} value
+ * @param {number} ttl @default 3600
+ * @returns boolean
+ * */
 async function setKey(key, value, ttl = 3600) {
   try {
-    const client = await getRedisClient();
-    if (!client) {
-      throw new Error('Redis client not connected');
-    }
-    await client.set(key, value, { EX: ttl });
+    const client = getRedisClient();
+    client.set(key, value, { EX: ttl });
     return true;
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
-    return e;
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
+    return false;
   }
 }
+/**
+ * Set a hash key in Redis
+ * @param {string} key
+ * @param {object} value
+ * @returns boolean
+ * */
+async function setHKey(key, value) {
+  try {
+    const client = getRedisClient();
+    await client.hSet(key, value);
+    return true;
+  } catch (e) {
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
+    return false;
+  }
+}
+/**
+ * Get a key from Redis
+ * @param {string} key
+ * @returns string || null || error
+ * */
 async function getKey(key) {
   try {
-    const client = await getRedisClient();
-    if (!client) {
-      throw new Error('Redis client not connected');
-    }
-    return await client.get(key);
+    const client = getRedisClient();
+    return client.get(key);
   } catch (e) {
-    console.log('\x1b[31m' + e.message + '\x1b[0m');
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
     return e;
   }
 }
-async function luaScriptCheckBids(key, bidAmount, item) {
-  const client = await getRedisClient();
-  if (!client) {
-    throw new Error('Redis client not connected');
+/**
+ * Get a hash key from Redis
+ * @param {string} key
+ * @returns object || null || error
+ * */
+async function getHKey(key) {
+  try {
+    const client = getRedisClient();
+    return await client.hGetAll(key);
+  } catch (e) {
+    if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
+      console.log('\x1b[31m' + e.message + '\x1b[0m');
+    }
+    return e;
   }
-  const script1 = `
-  local bidObject = redis.call('HGET', KEYS[1], 'bid') or 0;
-  local bidAmount = tonumber(bidObject) or 0; 
+}
+/**
+ * Lua script to check bids based on key and bid amount
+ * @param {string} key
+ * @param {string} bidAmount
+ * @param {object} item
+ * @returns {string}
+ *
+ * 'OK' - Should insert new a bid
+ *
+ * 'BID_LOW' - bid amount too low
+ *
+ * 'BID_EXPIRED' - item time to bid expired
+ * */
+async function luaScriptCheckBids(key, bidAmount, item) {
+  // Check for date difference before we start lua script
+  const itemEndTime = new Date(item.end_time).getTime();
+  const currentTime = new Date().getTime();
+  if (currentTime > itemEndTime) {
+    return 'BID_EXPIRED';
+  } else {
+    const script = `
+  local bidObject = redis.call('HGETALL', KEYS[1]);
+  local currentAmount = tonumber(ARGV[2]); 
+  local bid = bidObject.bid or currentAmount;
+  local bidAmount = tonumber(bid) or 0; 
   local newBid = tonumber(ARGV[1]);
   local totalBidAmount = bidAmount;
   if bidAmount < newBid then
-    redis.call('HSET', KEYS[1], 'bid', ARGV[1], 'id', ARGV[2], 'name', ARGV[3]);
-    return 1;
+    redis.call('HSET', KEYS[1], 'bid', ARGV[1], 'id', ARGV[3], 'name', ARGV[4], 'endtime', ARGV[5]);
+    return 'OK';
+  else 
+    return 'BID_LOW';
   end
-  return 0;
   `;
-  const result = await client.eval(script1, {
-    keys: [key],
-    arguments: [bidAmount.toString(), item.id.toString(), item.name],
-  });
-  return result;
+    const client = getRedisClient();
+    return client.eval(script, {
+      keys: [key],
+      arguments: [
+        parseInt(bidAmount).toString(),
+        item.current_bid.toString(),
+        item.id.toString(),
+        item.name.toString(),
+        (new Date(item.end_time).getTime() / 1000).toString(),
+      ],
+    });
+  }
 }
 
-export { getRedisClient, closeRedisClient, setKey, getKey, luaScriptCheckBids };
+export { closeRedisClient, setKey, getKey, setHKey, getHKey, luaScriptCheckBids };
