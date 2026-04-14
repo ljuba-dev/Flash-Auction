@@ -1,0 +1,6 @@
+export enum WS_MESSAGES_TYPE {
+  CONNECTION,
+  TOP_BIDS,
+  NEW_BID,
+  TOP_BIDS_UPDATED
+}

@@ -1,3 +1,49 @@
-<div class="flex h-screen items-center justify-center">
-  <router-outlet />
+<div class="navbar bg-base-100 shadow-sm">
+
+  <div class="max-w-7xl mx-auto w-full justify-between flex">
+    <div class="navbar-start">
+      <a class="btn btn-ghost text-xl">
+        <h1 class="text-4xl font-bold">Flash Auction</h1>
+      </a>
+    </div>
+    <div class="navbar-center">
+      @if (isAuthenticated()){
+        <ul class="menu menu-horizontal px-1">
+          <li>
+            <a routerLink="/items" >
+              Items
+            </a>
+          </li>
+          <li>
+            <a routerLink="/users">
+              Users
+            </a>
+          </li>
+          <li>
+            <a routerLink="/profile">
+              Profile
+            </a>
+          </li>
+        </ul>
+      }
+    </div>
+    <div class="navbar-end">
+      @if (isAuthenticated()){
+        <button class = "btn btn-error" (click) = "logout()"> Logout </button>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto w-full">
+<div class="flex justify-center my-2 items-center flex-row ">
+    <div class="flex justify-between w-1/2">
+
+
+    </div>
+  </div>
+  <div class="flex h-screen items-center justify-center">
+    <app-toast></app-toast>
+    <router-outlet />
+  </div>
 </div>

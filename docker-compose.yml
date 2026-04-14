@@ -1,10 +1,16 @@
-name: Flash-Auction-V1
+name: FLASH_AUCTION
 services:
   backend:
     container_name: Backend-Server
     build:
       context: backend
       dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     expose:
       - "3000"
     ports:
@@ -12,17 +18,29 @@ services:
     environment:
       NODE_ENV: docker
       PG_HOST: db
+      # Override build here to prevent docker-compose from using the default value
+      BUILD: mq
       REDIS_URL: redis://redisuser:redissecretpassword@host.docker.internal
       DATABASE_URL: postgres://mypostgresuser:mysecretpassword@db:5433/auction
+      RABBITMQ_URL: amqp://mymquser:mymqpassword@mq:5672
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
     networks:
       - app-network
 
   db:
     container_name: Postgres-Server
     image: postgres:18.3-alpine3.23
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -p 5433 -U $$POSTGRES_USER"  ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     expose:
       - "5433"
     ports:
@@ -40,6 +58,11 @@ services:
   redis:
     container_name: Redis-Server
     image: redis:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     expose:
       - "6379"
     ports:
@@ -50,6 +73,26 @@ services:
     command: ["redis-server", "--aclfile", "/etc/redis/users.acl"]
     restart: always
 
+  mq:
+    container_name: RabbitMQ-Server
+    image: rabbitmq:3-management-alpine
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "5672"
+      - "15672"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: mymquser
+      RABBITMQ_DEFAULT_PASS: mymqpassword
+    networks:
+      - app-network
+
   frontend:
     container_name: Frontend-Server
     build:
@@ -58,7 +101,23 @@ services:
     ports:
       - "4200:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  artillery:
+    container_name: Artillery-Server
+    platform: linux/amd64
+    image: artilleryio/artillery:latest
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./tests:/tests
+      - ./test-results:/results
+    command: >
+      run -o /results/results.json /tests/load-test.yml
     networks:
       - app-network
 

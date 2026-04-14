@@ -1,1 +1,130 @@
-<p>items works!</p>
+<div class="flex justify-between mb-4">
+  <h1 class="text-2xl font-bold">Items</h1>
+  <button class="btn btn-secondary">Create Item</button>
+</div>
+<div class="overflow-y-auto h-[calc(100vh-500px)]">
+  <table class="table table-zebra">
+    <!-- head -->
+    <thead class="sticky top-0 z-10 bg-gray-100 dark:bg-gray-800 shadow">
+    <tr>
+
+      <th>#</th>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Starting bid</th>
+      <th>Current bid</th>
+      <th>Expiration date</th>
+      <th>Action</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- row 1 -->
+    @for (item of _items(); track $index) {
+      <tr>
+        <th>{{ item.id }}</th>
+        <td>{{ item.name }}</td>
+        <td>{{ item.description }}</td>
+        <td>{{ item.starting_bid }}$</td>
+        <td>{{ item.current_bid | number:'1.2-2' }}$</td>
+        <td>{{ item.end_time }}</td>
+        <th>
+          <div class="flex flex-row w-full justify-between">
+          <button (click)="openModal(item)" class="mx-2 btn btn-primary">Bid</button>
+            <a class="btn btn-secondary" routerLink="/item/{{ item.id }}">View</a>
+
+          </div>
+        </th>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+<div class="fixed right-0 top-16 bottom-0 h-full w-2/12 backdrop-grayscale-50">
+  <div class="flex flex-col justify-center mt-4">
+    <ul class="list bg-base-100 rounded-box shadow-md">
+      <li class="p-4 pb-2 text-xl items-center text-center w-full opacity-60 tracking-wide">Top bids</li>
+
+      @for (bid of _topBids(); track $index) {
+      <li class="list-row">
+        <div class="text-4xl font-thin opacity-30 tabular-nums">
+          {{ bid.bid_amount | number: '1.0-0' }}$
+        </div>
+        <div class="columns-2 ">
+          <div class="list-col-grow">
+            <div>{{  bid.username }} {{'@'}} </div>
+            <div class="text-xs uppercase font-semibold opacity-60">
+              {{ bid.timestamp | date:'dd-mm-yyyy HH:mm:ss' }}
+            </div>
+          </div>
+          <div class="list-col-grow">
+            <div>Bid id</div>
+            <div class="text-xs uppercase font-semibold opacity-60">
+              {{ bid.id}}
+            </div>
+          </div>
+        </div>
+
+      </li>
+      }
+    </ul>
+  </div>
+</div>
+
+<dialog #bidModal id="bid_modal" class="modal">
+  <div class="modal-box">
+    <div class="card">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <div class="card-body">
+        <h2 class="card-title text-2xl">{{_selectedItem()?.name}}</h2>
+
+        <div class="flex justify-between">
+          <p class="py-4">Description:</p>
+          <p class="py-4">
+            {{_selectedItem()?.description}}
+          </p>
+        </div>
+        <div class="divider"></div>
+        <div class="flex justify-between">
+          <p class="py-4">Current Bid:</p>
+          <p class="py-4">
+            {{_selectedItem()?.current_bid}}
+          </p>
+        </div>
+        <div class="divider"></div>
+        <div class="flex justify-between">
+          <p class="py-4">Expiration Date:</p>
+          <p class="py-4">
+            {{_selectedItem()?.end_time}}
+          </p>
+        </div>
+        <div class="divider"></div>
+        <div class="flex w-full h-40 overflow-y-auto">
+          <ul class="list w-full">
+            <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">Previous bids:</li>
+            @for (bid of _itemBids(); track $index) {
+              <li class="list-row">
+                <div>{{ bid.username }}</div>
+                <div class="text-xs uppercase font-semibold opacity-60">{{ bid.timestamp }}</div>
+                <div class="text-xs font-semibold">{{ bid.bid_amount }} $</div>
+              </li>
+            }
+          </ul>
+        </div>
+        <div class="card-actions justify-end">
+          <fieldset class="fieldset items-center justify-center flex flex-row w-full">
+            <div class="flex flex-row w-full justify-between">
+              <input type="number" class="input mr-2 w-9/12" placeholder="Bid amount" [value]="_bidAmount()" (change)="updateBidAmount($event)" />
+              <button class="btn px-2 btn-primary w-3/12" (click)="bid()">Bid</button>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

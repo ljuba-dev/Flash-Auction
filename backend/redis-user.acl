@@ -1,0 +1,2 @@
+user redisuser on allkeys allchannels allcommands >redissecretpassword
+user default off
