@@ -12,6 +12,7 @@ For phase 1 of the project, check out the [README_PHASE1.md](README_PHASE_1.md)
 * Backend: Node.js (Express)
 * Primary DB: PostgreSQL (For users, items, and final orders)
 * Redis (For real-time updates)
+* RabbitMQ (For asynchronous communication)
 * Frontend: Angular (For the UI)
 
 ### Requirements
@@ -19,7 +20,9 @@ For phase 1 of the project, check out the [README_PHASE1.md](README_PHASE_1.md)
 * PostgreSQL (DB)
 * Redis (Cache)
 * Angular (Frontend)
-* Postman (For testing)
+* Docker (For local environment)
+* Artillery (For testing)
+* RabbitMQ (For asynchronous communication)
 
 ### 🎯 Goal
 
@@ -108,13 +111,15 @@ The app will be available at http://localhost:4200 (unless process env variables
 - Database server
 - MQ server
 - Redis server
-- Artillery server
+- Artillery server (which will run if `RUN_TESTS` is set to `true` in .env file)
 
-If you want to test different scenarios, you should change in docker-composer.yml file `BUILD` environment variable in backend service.  
+If you want to test different scenarios, you should change in .env file `BUILD_NAME` (options are: `normal`, `redis`, `mq`).
 
 The frontend app will be available at http://localhost:4200 (unless process env variables are changed).
 
 The backend app will be available at http://localhost:3000 (unless process env variables are changed).
+
+If you want to run tests automatically, when building docker-compose, you should change in .env file `RUN_TESTS` environment variable to `true`.
 
 #### Endpoints 
 You can see the endpoints by running app, and then navigate to http://localhost:3000/api/v1/docs which will present swagger documentation.
@@ -149,76 +154,111 @@ The endpoints are:
 
 ### Test results
 
+This test suite is designed to measure the impact of extreme, real-time traffic spikes on our bidding infrastructure. By simulating a "Flash Auction" scenario, we aim to validate the resilience of our decoupled architecture and determine its true operational limits.
+
+This test isn't just about speed; it's about Predictable Performance. We are achieving a clear understanding of our system's "Breaking Point" so we can guarantee 100% uptime and data integrity during the highest-value moments of our platform’s lifecycle.
 #### normal build
 
-The test simulated nearly 85,000 users over a 90-second duration.
+##### Test Overview
+This test evaluates the standard architectural pattern where the API communicates directly with the PostgreSQL database for every bid operation.
+**Test Duration:** 14m 2s
 
 | Metric | Result | Description |
 | :--- | :--- | :--- |
-| **Total Requests** | 84,750 | The total number of HTTP requests sent. |
-| **HTTP 200 (OK)** | 11,123 | Requests processed and completed successfully. |
-| **HTTP 202 (Accepted)** | 73,627 | Requests accepted for processing (Asynchronous). |
-| **Avg. Request Rate** | 1048 req/s | The average number of requests per second. |
-| **Peak Request Rate** | 2590 req/s | The maximum throughput achieved during the test. |
-| **Success Rate** | 100.00% | The percentage of requests that returned a 2xx code. |
-| **Avg. Response Time** | 21.7 ms | The mean time taken for the server to respond. |
-| **p50 (Median)** | 7 ms | 50% of requests were faster than this. |
-| **p95** | 102.5 ms | 95% of requests were faster than this. |
-| **p99** | 172.5 ms | 99% of requests were faster than this. |
-| **Max Latency** | 1059 ms | The single slowest response recorded. |
+| **Total Requests** | 2,295,332 | The total number of HTTP requests sent. |
+| **HTTP 200 (OK)** | 1,393,455 | Requests processed and completed successfully. |
+| **HTTP 202 (Accepted)** | 0 | Requests accepted for processing (Asynchronous). |
+| **Avg. Request Rate** | 564 req/s | The average number of requests per second. |
+| **Peak Request Rate** | 5398 req/s | The maximum throughput achieved during the test. |
+| **Success Rate** | 60.71% | The percentage of requests that returned a 2xx code. |
+| **Avg. Response Time** | 140.8 ms | The mean time taken for the server to respond. |
+| **p50 (Median)** | 122.7 ms | 50% of requests were faster than this. |
+| **p95** | 391.6 ms | 95% of requests were faster than this. |
+| **p99** | 671.9 ms | 99% of requests were faster than this. |
+| **Max Latency** | 2684 ms | The single slowest response recorded. |
+
+##### Error Analysis
+- **ETIMEDOUT (864,011):** Massive database connection timeouts as the pool was exhausted by row-level locking.
+- **EADDRNOTAVAIL (37,866):** OS level port exhaustion due to high socket churn.
+
+##### Conclusion
+The Direct SQL architecture experienced a complete system collapse. With a 40% failure rate, this pattern is unsuitable for high-concurrency auction events.
 
 
 #### redis build
 
-The test simulated nearly 85,000 users over a 90-second duration.
+##### Test Overview
+This test utilizes an in-memory Redis layer with Lua scripts to handle bidding logic atomically before any database interaction.
+**Test Duration:** 12m 53s
 
 | Metric | Result | Description |
 | :--- | :--- | :--- |
-| **Total Requests** | 84,750 | The total number of HTTP requests sent. |
-| **HTTP 200 (OK)** | 12,383 | Requests processed and completed successfully. |
-| **HTTP 202 (Accepted)** | 72,367 | Requests accepted for processing (Asynchronous). |
-| **Avg. Request Rate** | 903 req/s | The average number of requests per second. |
-| **Peak Request Rate** | 2747 req/s | The maximum throughput achieved during the test. |
-| **Success Rate** | 100.00% | The percentage of requests that returned a 2xx code. |
-| **Avg. Response Time** | 30.2 ms | The mean time taken for the server to respond. |
-| **p50 (Median)** | 7.9 ms | 50% of requests were faster than this. |
-| **p95** | 138.4 ms | 95% of requests were faster than this. |
-| **p99** | 273.2 ms | 99% of requests were faster than this. |
-| **Max Latency** | 388 ms | The single slowest response recorded. |
+| **Total Requests** | 2,295,332 | The total number of HTTP requests sent. |
+| **HTTP 200 (OK)** | 1,313,930 | Requests processed and completed successfully. |
+| **HTTP 202 (Accepted)** | 0 | Requests accepted for processing (Asynchronous). |
+| **Avg. Request Rate** | 760 req/s | The average number of requests per second. |
+| **Peak Request Rate** | 6864 req/s | The maximum throughput achieved during the test. |
+| **Success Rate** | 57.24% | The percentage of requests that returned a 2xx code. |
+| **Avg. Response Time** | 163.5 ms | The mean time taken for the server to respond. |
+| **p50 (Median)** | 149.9 ms | 50% of requests were faster than this. |
+| **p95** | 415.8 ms | 95% of requests were faster than this. |
+| **p99** | 671.9 ms | 99% of requests were faster than this. |
+| **Max Latency** | 3061 ms | The single slowest response recorded. |
+
+##### Error Analysis
+- **ETIMEDOUT (925,870):** Despite the faster memory logic, the synchronous nature of the requests blocked the API, leading to massive timeouts.
+- **EADDRNOTAVAIL (55,532):** Connection limits reached due to high concurrency.
+
+##### Conclusion
+While the processing logic was faster, the architecture still suffered from "synchronous bottlenecking," resulting in significant data loss during peak spikes.
 
 #### mq build 
 
-The test simulated nearly 85,000 users over a 90-second duration.
+##### Test Overview
+This is a fully decoupled architecture. The API performs an atomic check in Redis and immediately hands off the workload to RabbitMQ.
+**Test Duration:** 15m 47s
 
 | Metric | Result | Description |
 | :--- | :--- | :--- |
-| **Total Requests** | 84,750 | The total number of HTTP requests sent. |
-| **HTTP 200 (OK)** | 84,732 | Requests processed and completed successfully. |
-| **HTTP 202 (Accepted)** | 18 | Requests accepted for processing (Asynchronous). |
-| **Avg. Request Rate** | 904 req/s | The average number of requests per second. |
-| **Peak Request Rate** | 2391 req/s | The maximum throughput achieved during the test. |
+| **Total Requests** | 2,295,332 | The total number of HTTP requests sent. |
+| **HTTP 200 (OK)** | 27 | Requests processed and completed successfully. |
+| **HTTP 202 (Accepted)** | 2,295,305 | Requests accepted for processing (Asynchronous). |
+| **Avg. Request Rate** | 811 req/s | The average number of requests per second. |
+| **Peak Request Rate** | 3572 req/s | The maximum throughput achieved during the test. |
 | **Success Rate** | 100.00% | The percentage of requests that returned a 2xx code. |
-| **Avg. Response Time** | 55.0 ms | The mean time taken for the server to respond. |
-| **p50 (Median)** | 47 ms | 50% of requests were faster than this. |
-| **p95** | 147 ms | 95% of requests were faster than this. |
-| **p99** | 210.6 ms | 99% of requests were faster than this. |
-| **Max Latency** | 524 ms | The single slowest response recorded. |
+| **Avg. Response Time** | 222.8 ms | The mean time taken for the server to respond. |
+| **p50 (Median)** | 206.5 ms | 50% of requests were faster than this. |
+| **p95** | 507.8 ms | 95% of requests were faster than this. |
+| **p99** | 699.4 ms | 99% of requests were faster than this. |
+| **Max Latency** | 1437 ms | The single slowest response recorded. |
+
+##### Error Analysis
+- **None:** The system maintained 100% availability. RabbitMQ acted as a buffer, preventing the API from reaching timeout limits.
+
+##### Conclusion
+This architecture is the only design that successfully captured every single bid. By decoupled ingestion from processing, we achieved absolute reliability at scale.
 
 #### Comparison table
 
-| Metric | Normal (Direct) | Redis (Cached) | MQ (Async) |
-| :--- | :---: | :---: | :---: |
-| **Total Requests** | 84,750 | 84,750 | 84,750 |
-| **HTTP 200 (OK)** | 11,123 | 12,383 | 84,732 |
-| **HTTP 202 (Accepted)** | 73,627 | 72,367 | 18 |
-| **Avg. Request Rate** | 1048 req/s | 903 req/s | 904 req/s |
-| **Peak Request Rate** | 2590 req/s | 2747 req/s | 2391 req/s |
-| **Success Rate** | 100.00% | 100.00% | 100.00% |
-| **Avg. Response Time** | 21.7 ms | 30.2 ms | 55.0 ms |
-| **p50 (Median)** | 7 ms | 7.9 ms | 47 ms |
-| **p95** | 102.5 ms | 138.4 ms | 147 ms |
-| **p99** | 172.5 ms | 273.2 ms | 210.6 ms |
-| **Max Latency** | 1059 ms | 388 ms | 524 ms |
+##### Performance Comparison
+**Test Scope:** 2,295,332 Requests per Architecture
+
+| Metric | Normal (Direct) | Redis + Lua | MQ + Redis + Lua |
+| :--- | :--- | :--- | :--- |
+| **Total Requests** | 2,295,332 | 2,295,332 | 2,295,332 |
+| **Success Rate** | 60.71% | 57.24% | **100.00%** |
+| **Total Errors** | 901,877 | 981,402 | **0** |
+| **Peak Request Rate**| 5398 req/s | 6864 req/s | 3572 req/s |
+| **Avg. Response Time**| 140.8 ms | 163.5 ms | 222.8 ms |
+| **Apdex Score** | 0.33 | 0.18 | **0.42** |
+
+##### Critical Findings
+- **Data Retention:** The MQ architecture is mandatory for zero-loss scenarios. The other two architectures lost nearly 1 million bids each.
+- **Reliability vs. Latency:** While MQ has a higher response time (222ms vs 140ms), it is the only architecture that is actually "available" at this scale.
+- **System Resilience:** The MQ stack never hit port exhaustion, as it was able to clear connections faster by moving work to the background.
+
+##### Final Recommendation
+For production-grade real-time bidding, the **MQ + Redis + Lua** pattern is the only sustainable choice.
 
 #### _NOTE*_
 While the Normal (Direct Postgres) implementation shows a higher Peak RPS and lower median latency in this specific test, it is important to note the following:

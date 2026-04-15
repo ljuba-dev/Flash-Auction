@@ -1,9 +1,10 @@
 import { createClient } from 'redis';
 
+/** @type {import('redis').RedisClientType} */
 let client = null;
 /**
  * Create a connection to Redis and return the client that has initialized the connection
- * @returns client
+ * @returns {import('redis').RedisClientType}
  * */
 export async function connectRedis() {
   if (client) return client;
@@ -31,7 +32,7 @@ export async function connectRedis() {
  * Get the client or throw an error if it doesn't exist
  *
  * * *Note, this is used mostly so we don't re-initialize the client*
- * @returns client
+ * @returns {import('redis').RedisClientType}
  * */
 export const getRedisClient = () => {
   if (!client) {
