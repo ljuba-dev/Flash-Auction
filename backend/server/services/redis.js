@@ -79,9 +79,9 @@ async function getHKey(key) {
 /**
  * Lua script to check bids based on key and bid amount
  * @param {string} key
- * @param {string} bidAmount
+ * @param {number} bidAmount
  * @param {object} item
- * @returns {string}
+ * @returns Promise<string>
  *
  * 'OK' - Should insert new a bid
  *
@@ -103,18 +103,19 @@ async function luaScriptCheckBids(key, bidAmount, item) {
   local bidAmount = tonumber(bid) or 0; 
   local newBid = tonumber(ARGV[1]);
   local totalBidAmount = bidAmount;
-  if bidAmount < newBid then
+  if newBid > bidAmount then
     redis.call('HSET', KEYS[1], 'bid', ARGV[1], 'id', ARGV[3], 'name', ARGV[4], 'endtime', ARGV[5]);
     return 'OK';
   else 
     return 'BID_LOW';
   end
   `;
+    /** @type {import('redis').RedisClientType} */
     const client = getRedisClient();
-    return client.eval(script, {
+    return await client.eval(script, {
       keys: [key],
       arguments: [
-        parseInt(bidAmount).toString(),
+        bidAmount.toString(),
         item.current_bid.toString(),
         item.id.toString(),
         item.name.toString(),

@@ -2,8 +2,10 @@ config:
 # use 127.0.0.1 for local testing
 #  target: "http://127.0.0.1:3000/api/v1"
   target: "http://backend:3000/api/v1"
+  # CRITICAL for 30k RPS:
   http:
-    pool: 50
+    pool: 100 # Keep connections alive to avoid socket exhaustion
+    timeout: 10 # Short timeout so one slow request doesn't hang the test
   payload:
     - path: "./amount.csv"
       fields:
@@ -29,18 +31,26 @@ config:
       order: sequence
       skipHeader: true
   phases:
-    - duration: 30
-      arrivalRate: 50
+    # Phase 1: Warm-up (1 minute)
+    # Purpose: Initialize connection pools, JIT warm-up, and baseline check.
+    - duration: 60
+      arrivalRate: 10
       rampTo: 500
-      name: Warm up phase
-    - duration: 30
-      arrivalRate: 100
-      rampTo: 1000
-      name: Ramp up load
-    - duration: 30
-      arrivalRate: 1000
-      rampTo: 3000
-      name: Spike phase
+      name: "Warm-up"
+
+    # Phase 2: Sustained Load (3 minutes)
+    # Purpose: See how the DB handles consistent pressure.
+    # 2,000 RPS is often the 'tipping point' for unoptimized DB writes.
+    - duration: 180
+      arrivalRate: 2000
+      name: "Sustained Heavy Load"
+
+    # Phase 3: The 30k Spike (2 minutes)
+    # Purpose: The stress test. This is where MQ shines.
+    - duration: 120
+      arrivalRate: 2000
+      rampTo: 30000
+      name: "The 30k Spike"
   plugins:
     ensure:
       thresholds:

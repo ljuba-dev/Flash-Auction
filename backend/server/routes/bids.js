@@ -4,7 +4,7 @@ import { handleResponse } from '../services/helpers.js';
 
 const router = express.Router();
 router.post('/', async (req, res) => {
-  const user_id = req.user.sub;
+  const user_id = req.user.sub || req.user.id;
   const { item_id, bid_amount } = req.body;
   const createBid = await bid(user_id, item_id, bid_amount);
 

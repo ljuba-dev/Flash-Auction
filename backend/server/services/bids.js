@@ -6,6 +6,7 @@ import { broadcast } from './ws.js';
 import { wsTypes } from '../variables/ws.types.js';
 import { getChannel } from './mq.connect.js';
 
+/** @type  {import('amqplib/lib/channel_model').Channel}  */
 let channel;
 /**
  * Check if item exists
@@ -51,7 +52,7 @@ function _checkIfAllowToBid(item) {
 async function _normalBuild({ item, user_id, bid_amount }) {
   try {
     const item_id = item.id;
-    const getItem = await db.query(`SELECT * FROM auction.items WHERE id = '${item_id}';`);
+    const getItem = await db.query(`SELECT id, current_bid, end_time FROM auction.items WHERE id = '${item_id}';`);
     if (getItem.rows.length === 0) {
       throw new Error('Item not found');
     }
@@ -60,7 +61,7 @@ async function _normalBuild({ item, user_id, bid_amount }) {
     const endTime = new Date(_item.end_time);
 
     if (currentTime < endTime) {
-      if (bid_amount > _item.current_bid) {
+      if (parseInt(bid_amount.toString()) > parseInt(_item.current_bid.toString())) {
         const updateItem = await db.query(
           `UPDATE auction.items SET current_bid = '${bid_amount}' WHERE id = '${_item.id}';`,
         );
@@ -73,12 +74,24 @@ async function _normalBuild({ item, user_id, bid_amount }) {
         if (bidCreate.rowCount === 0) {
           throw new Error('Bid not created');
         }
-        return bidCreate.rows[0].id;
+        return {
+          error: false,
+          message: bidCreate.rows[0].id,
+          statusCode: 200,
+        };
       } else {
-        throw new Error('Bid amount is lower than current high bid');
+        return {
+          error: true,
+          message: 'Bid amount is lower than current high bid',
+          statusCode: 200,
+        };
       }
     } else {
-      throw new Error('Item is not active');
+      return {
+        error: true,
+        message: 'Bid expired',
+        statusCode: 200,
+      };
     }
   } catch (e) {
     if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
@@ -87,7 +100,7 @@ async function _normalBuild({ item, user_id, bid_amount }) {
     return {
       error: true,
       message: e.message,
-      statusCode: 202,
+      statusCode: 400,
     };
   }
 }
@@ -153,19 +166,19 @@ async function _mqBuild({ item, user_id, bid_amount }) {
       return {
         error: false,
         message: 'Bid placed successfully',
-        statusCode: 200,
+        statusCode: 202,
       };
     } else if (bid === 'BID_LOW') {
       return {
         error: true,
         message: 'Bid amount is lower than current high bid',
-        statusCode: 202,
+        statusCode: 200,
       };
     } else if (bid === 'BID_EXPIRED') {
       return {
         error: true,
         message: 'Bid expired',
-        statusCode: 202,
+        statusCode: 200,
       };
     } else {
       throw new Error('Bid amount is lower than current high bid');
