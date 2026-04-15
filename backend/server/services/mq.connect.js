@@ -2,22 +2,16 @@ import amqp from 'amqplib';
 import { dbWorkerQueue } from './workers/db_worker.js';
 
 let connection;
+/** @type {import('amqplib/lib/channel_model').Channel} */
 let channel;
 
 /**
  * Create a connection to RabbitMQ and return the channel
- * @returns channel
+ * @returns {import('amqplib/lib/channel_model').Channel}
  * */
 async function connectToRabbitMQ() {
   if (channel) return channel;
   try {
-    console.log('Connecting to RabbitMQ...');
-    console.log('process.env.RABBITMQ_URL');
-    console.log(process.env.RABBITMQ_URL);
-    console.log('process.env.AMQP_URL');
-    console.log(process.env.AMQP_URL);
-    console.log('USING: ');
-    console.log(process.env.RABBITMQ_URL ? process.env.RABBITMQ_URL : process.env.AMQP_URL || 'amqp://localhost');
     connection = process.env.RABBITMQ_URL
       ? await amqp.connect(process.env.RABBITMQ_URL)
       : amqp.connect(process.env.AMQP_URL || 'amqp://localhost');
@@ -42,7 +36,7 @@ async function connectToRabbitMQ() {
 }
 /**
  * Get the channel or create a new one if it doesn't exist
- * @returns channel
+ * @returns {import('amqplib/lib/channel_model').Channel}
  * */
 const getChannel = () => {
   if (!channel) {

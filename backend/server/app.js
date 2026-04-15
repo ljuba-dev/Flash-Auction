@@ -175,7 +175,6 @@ setTimeout(() => {
       if (process.env.SHOW_LOGS && process.env.SHOW_LOGS === 'true') {
         console.log('\x1b[32mDB worker initialized successfully.\x1b[0m');
       }
-
       /**
        *  Initialize inMemory variables
        * */
@@ -235,9 +234,9 @@ setTimeout(() => {
         `\n\x1b[34m \t|||||||||||||||||||||||||||||||||||||||||
         |\t     TESTING ENABLED    \t|
         |---------------------------------------| 
-        |   to disable it, change .env file by\t| 
-        |   removing or commenting out the \t| 
-        |\t   'TESTING' variable\t\t|
+        |   to disable it, change .env \t| 
+        |   file by removing or commenting \t| 
+        |   out the 'TESTING' variable\t|
         |||||||||||||||||||||||||||||||||||||||||\x1b[0m`,
       );
     }

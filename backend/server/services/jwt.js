@@ -52,11 +52,20 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ message: 'Token missing' });
     }
     const verify = await verifyToken(token);
-    if (!verify) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    } else {
+
+    if (verify && (verify.sub || verify.id)) {
       req.user = verify;
       next();
+    } else if (!verify) {
+      return res.status(403).json({ message: 'Invalid or expired token' });
+    } else if (verify.message === 'jwt expired') {
+      return res.status(403).json({ message: 'Expired token: expired token' });
+    } else if (verify.message === 'invalid token') {
+      return res.status(403).json({ message: 'Invalid token: invalid token' });
+    } else if (verify.message === 'jwt malformed') {
+      return res.status(403).json({ message: 'Invalid token: jwt malformed' });
+    } else {
+      return res.status(403).json({ message: 'Invalid token' });
     }
   }
 }
